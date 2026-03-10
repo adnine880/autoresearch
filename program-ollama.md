@@ -1,124 +1,235 @@
 # autoresearch (Local Ollama Agent)
 
-YOU ARE AN AUTONOMOUS AGENT. EXECUTE COMMANDS DIRECTLY. NEVER ASK THE USER QUESTIONS.
+YOU ARE AN AUTONOMOUS AGENT. DO NOT THINK. DO NOT ANALYZE. JUST EXECUTE COMMANDS.
 
-## CRITICAL RULES — READ THESE FIRST
+## RULES
 
-1. **NEVER ask the user what to change.** You decide.
-2. **NEVER list steps without executing them.** Run commands immediately.
-3. **NEVER stop or pause.** Keep running experiments forever.
-4. **ONLY modify `train.py`.** No other files.
-5. **Do NOT install new packages.**
-6. **When editing train.py, ONLY change the ONE line you need to change.** Do NOT reformat, restyle, or rewrite other lines. Use a find-and-replace style edit that changes ONLY the target line.
-7. **Ignore all linting warnings.** Warnings like "Import torch could not be resolved" are normal and harmless. Do NOT try to fix them.
-8. **You MUST run the baseline BEFORE making any edits.** The very first experiment is always running the unmodified code.
+- NEVER ask questions. NEVER list steps. NEVER explain your reasoning. Just run commands.
+- ONLY edit `train.py`. No other files.
+- Do NOT install packages. Do NOT reformat code. Do NOT fix warnings.
+- When editing, change ONLY the one line specified. Nothing else.
+- Do NOT stop between experiments. Keep looping forever.
 
-## First Time Setup
+## SETUP — Run these commands now
 
-Execute these steps IN ORDER. Do not skip any step.
-
-### Step A: Create a git branch
+Command 1:
 ```bash
 git checkout -b autoresearch/mar10
 ```
 
-### Step B: Read train.py
-Read the file `train.py` to understand the code. Look at the "Hyperparameters" section near the bottom — that is the ONLY section you will edit.
+Command 2: Read the file `train.py` (use your read tool).
 
-### Step C: Verify data exists
+Command 3:
 ```bash
 ls ~/.cache/autoresearch/
 ```
-If empty, tell the user to run `uv run prepare.py` and stop.
 
-### Step D: Run the BASELINE (unmodified code)
-Do NOT edit train.py yet. Run it as-is first:
+Command 4 — Run baseline (do NOT edit train.py first):
 ```bash
 uv run train.py > run.log 2>&1
 grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
-Record the val_bpb number — this is your baseline. Calculate memory_gb = peak_vram_mb / 1024.
+
+Command 5 — Log baseline (replace VALUES with numbers from grep output, memory_gb = peak_vram_mb / 1024):
 ```bash
 ./log_result.sh <val_bpb> <memory_gb> keep "baseline"
 ```
 
-Now you have a baseline. Remember this val_bpb number — all future experiments compare against it.
+The val_bpb from this baseline is your BEST score. Remember it.
 
-## Experiment Loop
+## EXPERIMENT LOOP — Repeat forever
 
-After the baseline, repeat this loop forever:
+Each experiment has 4 commands. Run them all, then start the next experiment.
 
-### Step 1: Make ONE small edit to train.py
+### Experiment 1: DEPTH = 10
 
-**IMPORTANT: Only change ONE line. Do not reformat or rewrite the file.**
+Edit train.py: find `DEPTH = 8` and replace with `DEPTH = 10`. Change nothing else.
 
-Use your edit tool to replace ONLY the specific line. For example, to change DEPTH:
-- Find: `DEPTH = 8`
-- Replace with: `DEPTH = 10`
-
-That is it. One line. Nothing else changes.
-
-Try these experiments IN ORDER (skip to next if current value already changed from a previous keep):
-
-1. `DEPTH = 8` → `DEPTH = 10`
-2. `DEPTH = 8` → `DEPTH = 6`
-3. `MATRIX_LR = 0.04` → `MATRIX_LR = 0.06`
-4. `MATRIX_LR = 0.04` → `MATRIX_LR = 0.02`
-5. `TOTAL_BATCH_SIZE = 2**19` → `TOTAL_BATCH_SIZE = 2**18`
-6. `ASPECT_RATIO = 64` → `ASPECT_RATIO = 48`
-7. `ASPECT_RATIO = 64` → `ASPECT_RATIO = 80`
-8. `WARMDOWN_RATIO = 0.5` → `WARMDOWN_RATIO = 0.3`
-9. `WARMDOWN_RATIO = 0.5` → `WARMDOWN_RATIO = 0.7`
-10. `WEIGHT_DECAY = 0.2` → `WEIGHT_DECAY = 0.1`
-11. `EMBEDDING_LR = 0.6` → `EMBEDDING_LR = 0.8`
-12. `WINDOW_PATTERN = "SSSL"` → `WINDOW_PATTERN = "SSLL"`
-13. `WINDOW_PATTERN = "SSSL"` → `WINDOW_PATTERN = "L"`
-14. `SCALAR_LR = 0.5` → `SCALAR_LR = 0.3`
-15. `HEAD_DIM = 128` → `HEAD_DIM = 64`
-
-After exhausting this list, combine successful changes or try new values.
-
-### Step 2: Commit the change
 ```bash
-git add train.py && git commit -m "try: <short description>"
-```
-
-### Step 3: Run the experiment
-```bash
+git add train.py && git commit -m "try: depth 10"
 uv run train.py > run.log 2>&1
 grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
-If grep returns nothing, the run crashed. Run `tail -n 30 run.log` to see error.
 
-### Step 4: Log result and decide
+If grep returned nothing = CRASH. Run: `./log_result.sh 0.000000 0.0 crash "depth 10"` then `git reset --hard HEAD~1`
+If val_bpb < best = IMPROVED. Run: `./log_result.sh <val_bpb> <memory_gb> keep "depth 10"` — update best.
+If val_bpb >= best = WORSE. Run: `./log_result.sh <val_bpb> <memory_gb> discard "depth 10"` then `git reset --hard HEAD~1`
 
-Calculate memory_gb = peak_vram_mb / 1024.
+### Experiment 2: DEPTH = 6
 
-**CRASH** (grep returned nothing):
+Edit train.py: find the current DEPTH line and replace with `DEPTH = 6`. Change nothing else.
+
 ```bash
-./log_result.sh 0.000000 0.0 crash "<description>"
-git reset --hard HEAD~1
+git add train.py && git commit -m "try: depth 6"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-**IMPROVED** (val_bpb is LOWER than best):
+Same logic: CRASH → log crash + reset. IMPROVED → log keep. WORSE → log discard + reset.
+
+### Experiment 3: MATRIX_LR = 0.06
+
+Edit train.py: find `MATRIX_LR = 0.04` and replace with `MATRIX_LR = 0.06`. Change nothing else.
+
 ```bash
-./log_result.sh <val_bpb> <memory_gb> keep "<description>"
+git add train.py && git commit -m "try: matrix_lr 0.06"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
-Keep the commit. Update your best val_bpb.
 
-**NOT IMPROVED** (val_bpb is EQUAL or HIGHER than best):
+Same logic: CRASH → log crash + reset. IMPROVED → log keep. WORSE → log discard + reset.
+
+### Experiment 4: MATRIX_LR = 0.02
+
+Edit: `MATRIX_LR = 0.04` → `MATRIX_LR = 0.02`
+
 ```bash
-./log_result.sh <val_bpb> <memory_gb> discard "<description>"
-git reset --hard HEAD~1
+git add train.py && git commit -m "try: matrix_lr 0.02"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-### Step 5: Go back to Step 1
+Same logic.
 
-Do NOT pause. Do NOT ask the user. Pick the next experiment and go immediately.
+### Experiment 5: TOTAL_BATCH_SIZE = 2**18
 
-## Things to IGNORE
+Edit: `TOTAL_BATCH_SIZE = 2**19` → `TOTAL_BATCH_SIZE = 2**18`
 
-- Linting errors about missing imports (torch, kernels, etc.) — these are normal
-- Type checker warnings — ignore them all
-- Code formatting suggestions — do NOT reformat the file
-- Any IDE warnings or suggestions — ignore everything except actual runtime errors
+```bash
+git add train.py && git commit -m "try: batch size 2**18"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 6: ASPECT_RATIO = 48
+
+Edit: `ASPECT_RATIO = 64` → `ASPECT_RATIO = 48`
+
+```bash
+git add train.py && git commit -m "try: aspect ratio 48"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 7: ASPECT_RATIO = 80
+
+Edit: `ASPECT_RATIO = 64` → `ASPECT_RATIO = 80`
+
+```bash
+git add train.py && git commit -m "try: aspect ratio 80"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 8: WARMDOWN_RATIO = 0.3
+
+Edit: `WARMDOWN_RATIO = 0.5` → `WARMDOWN_RATIO = 0.3`
+
+```bash
+git add train.py && git commit -m "try: warmdown 0.3"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 9: WARMDOWN_RATIO = 0.7
+
+Edit: `WARMDOWN_RATIO = 0.5` → `WARMDOWN_RATIO = 0.7`
+
+```bash
+git add train.py && git commit -m "try: warmdown 0.7"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 10: WEIGHT_DECAY = 0.1
+
+Edit: `WEIGHT_DECAY = 0.2` → `WEIGHT_DECAY = 0.1`
+
+```bash
+git add train.py && git commit -m "try: weight decay 0.1"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 11: EMBEDDING_LR = 0.8
+
+Edit: `EMBEDDING_LR = 0.6` → `EMBEDDING_LR = 0.8`
+
+```bash
+git add train.py && git commit -m "try: embedding lr 0.8"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 12: WINDOW_PATTERN = "SSLL"
+
+Edit: `WINDOW_PATTERN = "SSSL"` → `WINDOW_PATTERN = "SSLL"`
+
+```bash
+git add train.py && git commit -m "try: window SSLL"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 13: WINDOW_PATTERN = "L"
+
+Edit: `WINDOW_PATTERN = "SSSL"` → `WINDOW_PATTERN = "L"`
+
+```bash
+git add train.py && git commit -m "try: window L"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 14: SCALAR_LR = 0.3
+
+Edit: `SCALAR_LR = 0.5` → `SCALAR_LR = 0.3`
+
+```bash
+git add train.py && git commit -m "try: scalar lr 0.3"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### Experiment 15: HEAD_DIM = 64
+
+Edit: `HEAD_DIM = 128` → `HEAD_DIM = 64`
+
+```bash
+git add train.py && git commit -m "try: head dim 64"
+uv run train.py > run.log 2>&1
+grep "^val_bpb:\|^peak_vram_mb:" run.log
+```
+
+Same logic.
+
+### After all 15: Combine winning changes and try new values. Keep looping.
+
+## REMEMBER
+
+- Lower val_bpb = better
+- CRASH = grep returned nothing → log crash, reset commit
+- IMPROVED = val_bpb < best → log keep, update best
+- WORSE = val_bpb >= best → log discard, reset commit
+- memory_gb = peak_vram_mb / 1024
+- Ignore ALL warnings. Only care about runtime output.
