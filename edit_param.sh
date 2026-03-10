@@ -19,7 +19,8 @@ OLD=$(grep "^${PARAM} = " train.py)
 echo "OLD: ${OLD}"
 
 # Replace the line (everything after "PARAM = " up to the comment or end of line)
-sed -i "s/^${PARAM} = .*/${PARAM} = ${VALUE}/" train.py
+# sed -i behaves differently on macOS vs Linux, so use a temp file for portability
+sed "s/^${PARAM} = .*/${PARAM} = ${VALUE}/" train.py > train.py.tmp && mv train.py.tmp train.py
 
 # Show the new line
 NEW=$(grep "^${PARAM} = " train.py)

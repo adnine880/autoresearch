@@ -152,25 +152,30 @@ The defaults are sized for larger GPUs. On a laptop, you'll likely want to adjus
 ## Project structure
 
 ```
-prepare.py          — constants, data prep, tokenizer, evaluation (do not modify)
-train.py            — model, optimizer, training loop (agent modifies this)
-program-ollama.md   — agent instructions for local Ollama models
-edit_param.sh       — helper script to change one hyperparameter in train.py via sed
-log_result.sh       — helper script to append experiment results to results.tsv
-pyproject.toml      — dependencies
+prepare.py            — constants, data prep, tokenizer, evaluation (do not modify)
+train.py              — model, optimizer, training loop (agent modifies this)
+program-ollama.md     — agent instructions for local Ollama models
+edit_param.sh         — change one hyperparameter in train.py via sed
+run_experiment.sh     — train, compare to best score, log result (IMPROVED/WORSE/CRASH)
+revert_experiment.sh  — revert last commit when experiment fails or regresses
+log_result.sh         — append experiment results to results.tsv
+opencode.json         — OpenCode provider config for local Ollama
+pyproject.toml        — dependencies
 ```
 
 ## How program-ollama.md works
 
 Small local models (8B params) can't reliably follow abstract research instructions the way large frontier models can. They get stuck in analysis loops, reformat entire files instead of making surgical edits, and chase linting warnings.
 
-`program-ollama.md` and `edit_param.sh` solve this together:
+`program-ollama.md` and the helper scripts solve this together:
 
 - **`edit_param.sh`** — the agent never touches the Edit tool (which small models can't use without reformatting the entire file). Instead it runs `./edit_param.sh DEPTH 10` to make surgical `sed` replacements
-- Every experiment is its own numbered section with exact bash commands
+- **`run_experiment.sh`** — handles all the logic a small model would botch: trains, extracts metrics, compares to the best score (stored in `best_val_bpb.txt`), logs the result, and prints a single word: `IMPROVED`, `WORSE`, or `CRASH`
+- **`revert_experiment.sh`** — one command to undo a failed experiment (`git reset --hard HEAD~1`)
+- Every experiment is its own numbered section with identical structure — no "same as above"
+- Every Bash tool call must include a `description` parameter (OpenCode requirement that small models skip unless told)
 - Commit messages are pre-written
-- Decision logic (keep/discard/crash) is repeated inline, not referenced abstractly
-- Explicit "ignore all warnings" rules prevent the model from getting distracted
+- Decision logic is reduced to: "if CRASH or WORSE, revert. if IMPROVED, continue."
 
 This treats the local model as a script executor rather than a researcher. The "research" is front-loaded into the prompt design.
 
