@@ -27,14 +27,24 @@ ls ~/.cache/autoresearch/
 
 You should see data files and a tokenizer. If not, run `uv run prepare.py` first.
 
-Step 3: Run the baseline training.
+Step 3: Smoke test — make sure train.py can start without crashing.
+
+```bash
+uv run python -c "import train" 2>&1 | head -5
+```
+
+If this prints an error about "kernels" or "flash-attn", the GPU does not support Flash Attention 3. That is OK — train.py will automatically use the PyTorch SDPA fallback. If it prints "Flash Attention 3 not available, using PyTorch SDPA fallback", that is fine. If it prints a CUDA error, stop and tell the user.
+
+Step 4: Run the baseline training.
 
 ```bash
 uv run train.py > run.log 2>&1
 grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Step 4: Save the baseline. Take the val_bpb number from the grep output and the peak_vram_mb number. Divide peak_vram_mb by 1024 to get memory_gb. Then run these two commands:
+If grep prints nothing, the training crashed. Run `tail -30 run.log` to see the error. Stop and tell the user.
+
+Step 5: Save the baseline.
 
 ```bash
 grep "^val_bpb:" run.log | awk '{print $2}' > best_val_bpb.txt

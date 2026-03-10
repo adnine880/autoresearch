@@ -138,6 +138,16 @@ The agent will create a branch, run a baseline, then loop through hyperparameter
 
 Everything stays on your machine — no API keys required, no cloud costs, complete privacy, and offline capability.
 
+## GPU compatibility
+
+`train.py` automatically detects your GPU and picks the best attention backend:
+
+- **H100 (Hopper)**: Flash Attention 3 via `varunneal/flash-attention-3`
+- **Other NVIDIA GPUs with FA3 support**: Flash Attention 3 via `kernels-community/flash-attn3`
+- **All other CUDA GPUs**: PyTorch's built-in `scaled_dot_product_attention` (SDPA)
+
+No code changes needed — the fallback is automatic. You'll see a message at startup telling you which backend is active. Similarly, `torch.compile` is used when available but the script runs fine in eager mode if compilation fails.
+
 ## Tuning for your laptop
 
 The defaults are sized for larger GPUs. On a laptop, you'll likely want to adjust:
