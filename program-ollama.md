@@ -27,14 +27,32 @@ ls ~/.cache/autoresearch/
 
 You should see data files and a tokenizer. If not, run `uv run prepare.py` first.
 
-Step 3: Run the baseline training.
+Step 3: Smoke test — make sure train.py can start without crashing.
+
+```bash
+uv run python -c "import train" 2>&1 | head -5
+```
+
+If this prints an error about "kernels" or "flash-attn", the GPU does not support Flash Attention 3. That is OK — train.py will automatically use the PyTorch SDPA fallback. If it prints "Flash Attention 3 not available, using PyTorch SDPA fallback", that is fine. If it prints a CUDA error, stop and tell the user.
+
+Step 4: Check GPU memory to confirm defaults are safe.
+
+```bash
+uv run python -c "import torch; print(f'GPU: {torch.cuda.get_device_name()}'); print(f'VRAM: {torch.cuda.get_device_properties(0).total_mem / 1024**3:.1f} GB')"
+```
+
+The defaults in train.py are tuned for 8GB VRAM (DEPTH=6, DEVICE_BATCH_SIZE=16, TOTAL_BATCH_SIZE=2**16, HEAD_DIM=64, WINDOW_PATTERN="L"). If the GPU has more than 12GB, you could increase DEVICE_BATCH_SIZE to 32.
+
+Step 5: Run the baseline training.
 
 ```bash
 uv run train.py > run.log 2>&1
 grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Step 4: Save the baseline. Take the val_bpb number from the grep output and the peak_vram_mb number. Divide peak_vram_mb by 1024 to get memory_gb. Then run these two commands:
+If grep prints nothing, the training crashed. Run `tail -30 run.log` to see the error. Stop and tell the user.
+
+Step 6: Save the baseline.
 
 ```bash
 grep "^val_bpb:" run.log | awk '{print $2}' > best_val_bpb.txt
@@ -54,18 +72,18 @@ For EVERY experiment, the steps are always the same:
 3. Run run_experiment.sh — it trains, compares to best, and logs the result
 4. Check the output: if it says CRASH or WORSE, run revert_experiment.sh. If it says IMPROVED, do nothing.
 
-### Experiment 1: DEPTH = 10
+### Experiment 1: DEPTH = 8
 
 ```bash
-./edit_param.sh DEPTH 10
+./edit_param.sh DEPTH 8
 ```
 
 ```bash
-git add train.py && git commit -m "try: depth 10"
+git add train.py && git commit -m "try: depth 8"
 ```
 
 ```bash
-./run_experiment.sh "depth 10"
+./run_experiment.sh "depth 8"
 ```
 
 If the output says CRASH or WORSE, run this:
@@ -76,18 +94,18 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 2: DEPTH = 6
+### Experiment 2: DEPTH = 4
 
 ```bash
-./edit_param.sh DEPTH 6
+./edit_param.sh DEPTH 4
 ```
 
 ```bash
-git add train.py && git commit -m "try: depth 6"
+git add train.py && git commit -m "try: depth 4"
 ```
 
 ```bash
-./run_experiment.sh "depth 6"
+./run_experiment.sh "depth 4"
 ```
 
 If the output says CRASH or WORSE, run this:
@@ -142,18 +160,18 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 5: TOTAL_BATCH_SIZE = 2**18
+### Experiment 5: TOTAL_BATCH_SIZE = 2**17
 
 ```bash
-./edit_param.sh TOTAL_BATCH_SIZE '2**18'
+./edit_param.sh TOTAL_BATCH_SIZE '2**17'
 ```
 
 ```bash
-git add train.py && git commit -m "try: batch size 2**18"
+git add train.py && git commit -m "try: batch size 2**17"
 ```
 
 ```bash
-./run_experiment.sh "batch size 2**18"
+./run_experiment.sh "batch size 2**17"
 ```
 
 If the output says CRASH or WORSE, run this:
@@ -164,7 +182,29 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 6: ASPECT_RATIO = 48
+### Experiment 6: TOTAL_BATCH_SIZE = 2**14
+
+```bash
+./edit_param.sh TOTAL_BATCH_SIZE '2**14'
+```
+
+```bash
+git add train.py && git commit -m "try: batch size 2**14"
+```
+
+```bash
+./run_experiment.sh "batch size 2**14"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
+
+### Experiment 7: ASPECT_RATIO = 48
 
 ```bash
 ./edit_param.sh ASPECT_RATIO 48
@@ -186,7 +226,7 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 7: ASPECT_RATIO = 80
+### Experiment 8: ASPECT_RATIO = 80
 
 ```bash
 ./edit_param.sh ASPECT_RATIO 80
@@ -208,7 +248,7 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 8: WARMDOWN_RATIO = 0.3
+### Experiment 9: WARMDOWN_RATIO = 0.3
 
 ```bash
 ./edit_param.sh WARMDOWN_RATIO 0.3
@@ -230,7 +270,7 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 9: WARMDOWN_RATIO = 0.7
+### Experiment 10: WARMDOWN_RATIO = 0.7
 
 ```bash
 ./edit_param.sh WARMDOWN_RATIO 0.7
@@ -252,7 +292,7 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 10: WEIGHT_DECAY = 0.1
+### Experiment 11: WEIGHT_DECAY = 0.1
 
 ```bash
 ./edit_param.sh WEIGHT_DECAY 0.1
@@ -274,7 +314,7 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 11: EMBEDDING_LR = 0.8
+### Experiment 12: EMBEDDING_LR = 0.8
 
 ```bash
 ./edit_param.sh EMBEDDING_LR 0.8
@@ -296,40 +336,18 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 12: WINDOW_PATTERN = "SSLL"
+### Experiment 13: DEVICE_BATCH_SIZE = 32
 
 ```bash
-./edit_param.sh WINDOW_PATTERN '"SSLL"'
+./edit_param.sh DEVICE_BATCH_SIZE 32
 ```
 
 ```bash
-git add train.py && git commit -m "try: window SSLL"
+git add train.py && git commit -m "try: device batch 32"
 ```
 
 ```bash
-./run_experiment.sh "window SSLL"
-```
-
-If the output says CRASH or WORSE, run this:
-
-```bash
-./revert_experiment.sh
-```
-
-If the output says IMPROVED, do NOT revert. Move to the next experiment.
-
-### Experiment 13: WINDOW_PATTERN = "L"
-
-```bash
-./edit_param.sh WINDOW_PATTERN '"L"'
-```
-
-```bash
-git add train.py && git commit -m "try: window L"
-```
-
-```bash
-./run_experiment.sh "window L"
+./run_experiment.sh "device batch 32"
 ```
 
 If the output says CRASH or WORSE, run this:
@@ -362,18 +380,18 @@ If the output says CRASH or WORSE, run this:
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
-### Experiment 15: HEAD_DIM = 64
+### Experiment 15: HEAD_DIM = 128
 
 ```bash
-./edit_param.sh HEAD_DIM 64
+./edit_param.sh HEAD_DIM 128
 ```
 
 ```bash
-git add train.py && git commit -m "try: head dim 64"
+git add train.py && git commit -m "try: head dim 128"
 ```
 
 ```bash
-./run_experiment.sh "head dim 64"
+./run_experiment.sh "head dim 128"
 ```
 
 If the output says CRASH or WORSE, run this:
