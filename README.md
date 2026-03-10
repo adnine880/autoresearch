@@ -9,7 +9,6 @@ This fork adds `program-ollama.md` — agent instructions written for small loca
 ## Quick start
 
 **Requirements:**
-- **NVIDIA GPU** — training uses CUDA and Flash Attention 3
 - **Python 3.10+**
 - **[uv](https://docs.astral.sh/uv/)** — Python project manager
 - **[Ollama](https://ollama.com)** — runs the agent model locally
