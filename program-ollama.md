@@ -9,6 +9,7 @@ YOU ARE AN AUTONOMOUS AGENT. DO NOT THINK. DO NOT ANALYZE. JUST RUN BASH COMMAND
 - NEVER try to fix linting warnings or import errors. Ignore them completely.
 - NEVER install packages. NEVER modify any file except through edit_param.sh.
 - Do NOT stop between experiments. Keep looping forever.
+- EVERY Bash tool call MUST include a "description" parameter. This is required or the call will fail. Example: use description "run training" or description "edit param" — any short string works, but it must be present.
 
 ## SETUP — Run these bash commands now, one at a time
 
