@@ -148,16 +148,26 @@ Everything stays on your machine — no API keys required, no cloud costs, compl
 
 No code changes needed — the fallback is automatic. You'll see a message at startup telling you which backend is active. Similarly, `torch.compile` is used when available but the script runs fine in eager mode if compilation fails.
 
-## Tuning for your laptop
+## Default configuration (8GB laptop GPU)
 
-The defaults are sized for larger GPUs. On a laptop, you'll likely want to adjust:
+The defaults in `train.py` are tuned for an 8GB laptop GPU (e.g. RTX 5060/5070):
 
-- Lower `DEPTH` (e.g. 4) — the primary knob for model size
-- Lower `TOTAL_BATCH_SIZE` (e.g. `2**14`) — fewer tokens per step
-- Lower `DEVICE_BATCH_SIZE` (e.g. 32 or 16) — if you hit OOM
-- Use `WINDOW_PATTERN = "L"` — the `"SSSL"` alternating pattern can be inefficient on smaller setups
-- Lower `MAX_SEQ_LEN` in `prepare.py` (e.g. 256) and lower `EVAL_TOKENS` to speed up evaluation
-- Use a narrower dataset like [TinyStories](https://huggingface.co/datasets/karpathy/tinystories-gpt4-clean) for better results with small models
+| Parameter | Default | Purpose |
+|-----------|---------|---------|
+| `DEPTH` | 6 | Number of transformer layers |
+| `DEVICE_BATCH_SIZE` | 16 | Tokens per micro-batch (fits 8GB) |
+| `TOTAL_BATCH_SIZE` | 2^16 (65K) | Tokens per optimizer step |
+| `HEAD_DIM` | 64 | Attention head dimension |
+| `WINDOW_PATTERN` | "L" | Full-context attention only |
+
+If you have a larger GPU (16GB+), you can increase:
+- `DEVICE_BATCH_SIZE` to 32-64 — faster training
+- `DEPTH` to 8-10 — deeper model
+- `TOTAL_BATCH_SIZE` to `2**18` — better gradient estimates
+- `HEAD_DIM` to 128 — wider attention heads
+- `WINDOW_PATTERN` to "SSSL" — alternating sliding window
+
+For very small GPUs (4-6GB), lower `DEVICE_BATCH_SIZE` to 8 and `DEPTH` to 4.
 
 ## Project structure
 
