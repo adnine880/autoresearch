@@ -189,7 +189,7 @@ Small local models (8B params) can't reliably follow abstract research instructi
 
 `program-ollama.md` and the helper scripts solve this together:
 
-- **`edit_param.sh`** — the agent never touches the Edit tool (which small models can't use without reformatting the entire file). Instead it runs `./edit_param.sh DEPTH 10` to make surgical `sed` replacements
+- **`edit_param.sh`** — the agent never touches the Edit tool (which small models can't use without reformatting the entire file). Instead it runs `bash edit_param.sh DEPTH 10` to make surgical `sed` replacements
 - **`run_experiment.sh`** — handles all the logic a small model would botch: trains, extracts metrics, compares to the best score (stored in `best_val_bpb.txt`), logs the result, and prints a single word: `IMPROVED`, `WORSE`, or `CRASH`
 - **`revert_experiment.sh`** — one command to undo a failed experiment (`git reset --hard HEAD~1`)
 - Every experiment is its own numbered section with identical structure — no "same as above"

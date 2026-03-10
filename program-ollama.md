@@ -7,7 +7,7 @@ YOU ARE AN AUTONOMOUS AGENT. DO NOT THINK. DO NOT ANALYZE. JUST RUN BASH COMMAND
 - NEVER use the edit tool. NEVER use the write tool. Only use bash commands.
 - NEVER ask questions. NEVER explain your reasoning. Just run commands.
 - NEVER try to fix linting warnings or import errors. Ignore them completely.
-- NEVER install packages. NEVER modify any file except through edit_param.sh.
+- NEVER install packages. NEVER modify any file except through bash edit_param.sh.
 - Do NOT stop between experiments. Keep looping forever.
 - EVERY Bash tool call MUST include a "description" parameter. This is required or the call will fail. Example: use description "run training" or description "edit param" — any short string works, but it must be present.
 
@@ -47,7 +47,7 @@ Step 5: Run the baseline training.
 
 ```bash
 uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
+grep -E "^val_bpb:|^peak_vram_mb:" run.log
 ```
 
 If grep prints nothing, the training crashed. Run `tail -30 run.log` to see the error. Stop and tell the user.
@@ -59,7 +59,7 @@ grep "^val_bpb:" run.log | awk '{print $2}' > best_val_bpb.txt
 ```
 
 ```bash
-./log_result.sh $(grep "^val_bpb:" run.log | awk '{print $2}') $(echo "scale=1; $(grep "^peak_vram_mb:" run.log | awk '{print $2}') / 1024" | bc) keep "baseline"
+bash log_result.sh $(grep "^val_bpb:" run.log | awk '{print $2}') $(echo "scale=1; $(grep "^peak_vram_mb:" run.log | awk '{print $2}') / 1024" | bc) keep "baseline"
 ```
 
 Now start the experiments below. Do them in order, one at a time.
@@ -75,7 +75,7 @@ For EVERY experiment, the steps are always the same:
 ### Experiment 1: DEPTH = 8
 
 ```bash
-./edit_param.sh DEPTH 8
+bash edit_param.sh DEPTH 8
 ```
 
 ```bash
@@ -83,13 +83,13 @@ git add train.py && git commit -m "try: depth 8"
 ```
 
 ```bash
-./run_experiment.sh "depth 8"
+bash run_experiment.sh "depth 8"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -97,7 +97,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 2: DEPTH = 4
 
 ```bash
-./edit_param.sh DEPTH 4
+bash edit_param.sh DEPTH 4
 ```
 
 ```bash
@@ -105,13 +105,13 @@ git add train.py && git commit -m "try: depth 4"
 ```
 
 ```bash
-./run_experiment.sh "depth 4"
+bash run_experiment.sh "depth 4"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -119,7 +119,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 3: MATRIX_LR = 0.06
 
 ```bash
-./edit_param.sh MATRIX_LR 0.06
+bash edit_param.sh MATRIX_LR 0.06
 ```
 
 ```bash
@@ -127,13 +127,13 @@ git add train.py && git commit -m "try: matrix_lr 0.06"
 ```
 
 ```bash
-./run_experiment.sh "matrix_lr 0.06"
+bash run_experiment.sh "matrix_lr 0.06"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -141,7 +141,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 4: MATRIX_LR = 0.02
 
 ```bash
-./edit_param.sh MATRIX_LR 0.02
+bash edit_param.sh MATRIX_LR 0.02
 ```
 
 ```bash
@@ -149,13 +149,13 @@ git add train.py && git commit -m "try: matrix_lr 0.02"
 ```
 
 ```bash
-./run_experiment.sh "matrix_lr 0.02"
+bash run_experiment.sh "matrix_lr 0.02"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -163,7 +163,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 5: TOTAL_BATCH_SIZE = 2**17
 
 ```bash
-./edit_param.sh TOTAL_BATCH_SIZE '2**17'
+bash edit_param.sh TOTAL_BATCH_SIZE '2**17'
 ```
 
 ```bash
@@ -171,13 +171,13 @@ git add train.py && git commit -m "try: batch size 2**17"
 ```
 
 ```bash
-./run_experiment.sh "batch size 2**17"
+bash run_experiment.sh "batch size 2**17"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -185,7 +185,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 6: TOTAL_BATCH_SIZE = 2**14
 
 ```bash
-./edit_param.sh TOTAL_BATCH_SIZE '2**14'
+bash edit_param.sh TOTAL_BATCH_SIZE '2**14'
 ```
 
 ```bash
@@ -193,13 +193,13 @@ git add train.py && git commit -m "try: batch size 2**14"
 ```
 
 ```bash
-./run_experiment.sh "batch size 2**14"
+bash run_experiment.sh "batch size 2**14"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -207,7 +207,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 7: ASPECT_RATIO = 48
 
 ```bash
-./edit_param.sh ASPECT_RATIO 48
+bash edit_param.sh ASPECT_RATIO 48
 ```
 
 ```bash
@@ -215,13 +215,13 @@ git add train.py && git commit -m "try: aspect ratio 48"
 ```
 
 ```bash
-./run_experiment.sh "aspect ratio 48"
+bash run_experiment.sh "aspect ratio 48"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -229,7 +229,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 8: ASPECT_RATIO = 80
 
 ```bash
-./edit_param.sh ASPECT_RATIO 80
+bash edit_param.sh ASPECT_RATIO 80
 ```
 
 ```bash
@@ -237,13 +237,13 @@ git add train.py && git commit -m "try: aspect ratio 80"
 ```
 
 ```bash
-./run_experiment.sh "aspect ratio 80"
+bash run_experiment.sh "aspect ratio 80"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -251,7 +251,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 9: WARMDOWN_RATIO = 0.3
 
 ```bash
-./edit_param.sh WARMDOWN_RATIO 0.3
+bash edit_param.sh WARMDOWN_RATIO 0.3
 ```
 
 ```bash
@@ -259,13 +259,13 @@ git add train.py && git commit -m "try: warmdown 0.3"
 ```
 
 ```bash
-./run_experiment.sh "warmdown 0.3"
+bash run_experiment.sh "warmdown 0.3"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -273,7 +273,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 10: WARMDOWN_RATIO = 0.7
 
 ```bash
-./edit_param.sh WARMDOWN_RATIO 0.7
+bash edit_param.sh WARMDOWN_RATIO 0.7
 ```
 
 ```bash
@@ -281,13 +281,13 @@ git add train.py && git commit -m "try: warmdown 0.7"
 ```
 
 ```bash
-./run_experiment.sh "warmdown 0.7"
+bash run_experiment.sh "warmdown 0.7"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -295,7 +295,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 11: WEIGHT_DECAY = 0.1
 
 ```bash
-./edit_param.sh WEIGHT_DECAY 0.1
+bash edit_param.sh WEIGHT_DECAY 0.1
 ```
 
 ```bash
@@ -303,13 +303,13 @@ git add train.py && git commit -m "try: weight decay 0.1"
 ```
 
 ```bash
-./run_experiment.sh "weight decay 0.1"
+bash run_experiment.sh "weight decay 0.1"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -317,7 +317,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 12: EMBEDDING_LR = 0.8
 
 ```bash
-./edit_param.sh EMBEDDING_LR 0.8
+bash edit_param.sh EMBEDDING_LR 0.8
 ```
 
 ```bash
@@ -325,13 +325,13 @@ git add train.py && git commit -m "try: embedding lr 0.8"
 ```
 
 ```bash
-./run_experiment.sh "embedding lr 0.8"
+bash run_experiment.sh "embedding lr 0.8"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -339,7 +339,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 13: DEVICE_BATCH_SIZE = 32
 
 ```bash
-./edit_param.sh DEVICE_BATCH_SIZE 32
+bash edit_param.sh DEVICE_BATCH_SIZE 32
 ```
 
 ```bash
@@ -347,13 +347,13 @@ git add train.py && git commit -m "try: device batch 32"
 ```
 
 ```bash
-./run_experiment.sh "device batch 32"
+bash run_experiment.sh "device batch 32"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -361,7 +361,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 14: SCALAR_LR = 0.3
 
 ```bash
-./edit_param.sh SCALAR_LR 0.3
+bash edit_param.sh SCALAR_LR 0.3
 ```
 
 ```bash
@@ -369,13 +369,13 @@ git add train.py && git commit -m "try: scalar lr 0.3"
 ```
 
 ```bash
-./run_experiment.sh "scalar lr 0.3"
+bash run_experiment.sh "scalar lr 0.3"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert. Move to the next experiment.
@@ -383,7 +383,7 @@ If the output says IMPROVED, do NOT revert. Move to the next experiment.
 ### Experiment 15: HEAD_DIM = 128
 
 ```bash
-./edit_param.sh HEAD_DIM 128
+bash edit_param.sh HEAD_DIM 128
 ```
 
 ```bash
@@ -391,13 +391,13 @@ git add train.py && git commit -m "try: head dim 128"
 ```
 
 ```bash
-./run_experiment.sh "head dim 128"
+bash run_experiment.sh "head dim 128"
 ```
 
 If the output says CRASH or WORSE, run this:
 
 ```bash
-./revert_experiment.sh
+bash revert_experiment.sh
 ```
 
 If the output says IMPROVED, do NOT revert.
@@ -406,7 +406,7 @@ If the output says IMPROVED, do NOT revert.
 
 ## REMEMBER
 
-- CRASH or WORSE = run ./revert_experiment.sh
+- CRASH or WORSE = run bash revert_experiment.sh
 - IMPROVED = do NOT revert
 - Do NOT stop. Start the next experiment immediately.
 - EVERY Bash tool call MUST include a "description" parameter or it will fail.
