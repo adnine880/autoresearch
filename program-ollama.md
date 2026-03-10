@@ -11,223 +11,384 @@ YOU ARE AN AUTONOMOUS AGENT. DO NOT THINK. DO NOT ANALYZE. JUST RUN BASH COMMAND
 - Do NOT stop between experiments. Keep looping forever.
 - EVERY Bash tool call MUST include a "description" parameter. This is required or the call will fail. Example: use description "run training" or description "edit param" — any short string works, but it must be present.
 
-## SETUP — Run these bash commands now, one at a time
+## SETUP — Run these commands one at a time
+
+Step 1: Create a branch.
 
 ```bash
-git checkout -b autoresearch/mar10
+git checkout -b autoresearch/run1
 ```
 
-```bash
-cat train.py | head -20
-```
+Step 2: Verify data is ready.
 
 ```bash
 ls ~/.cache/autoresearch/
 ```
 
+You should see data files and a tokenizer. If not, run `uv run prepare.py` first.
+
+Step 3: Run the baseline training.
+
 ```bash
 uv run train.py > run.log 2>&1
 grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-After that grep, record the val_bpb number. That is your baseline BEST score. Calculate memory_gb = peak_vram_mb / 1024. Then run:
+Step 4: Save the baseline. Take the val_bpb number from the grep output and the peak_vram_mb number. Divide peak_vram_mb by 1024 to get memory_gb. Then run these two commands:
 
 ```bash
-./log_result.sh <val_bpb> <memory_gb> keep "baseline"
+grep "^val_bpb:" run.log | awk '{print $2}' > best_val_bpb.txt
 ```
 
-## EXPERIMENT LOOP — Run these experiments one at a time, in order
+```bash
+./log_result.sh $(grep "^val_bpb:" run.log | awk '{print $2}') $(echo "scale=1; $(grep "^peak_vram_mb:" run.log | awk '{print $2}') / 1024" | bc) keep "baseline"
+```
 
-For each experiment: run edit_param.sh, commit, train, check result, log it.
+Now start the experiments below. Do them in order, one at a time.
+
+## EXPERIMENT LOOP
+
+For EVERY experiment, the steps are always the same:
+1. Run edit_param.sh to change a value
+2. Commit the change
+3. Run run_experiment.sh — it trains, compares to best, and logs the result
+4. Check the output: if it says CRASH or WORSE, run revert_experiment.sh. If it says IMPROVED, do nothing.
 
 ### Experiment 1: DEPTH = 10
 
 ```bash
 ./edit_param.sh DEPTH 10
+```
+
+```bash
 git add train.py && git commit -m "try: depth 10"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-If grep returned nothing = CRASH:
 ```bash
-./log_result.sh 0.000000 0.0 crash "depth 10"
-git reset --hard HEAD~1
+./run_experiment.sh "depth 10"
 ```
 
-If val_bpb < best = IMPROVED:
+If the output says CRASH or WORSE, run this:
+
 ```bash
-./log_result.sh <val_bpb> <memory_gb> keep "depth 10"
+./revert_experiment.sh
 ```
 
-If val_bpb >= best = WORSE:
-```bash
-./log_result.sh <val_bpb> <memory_gb> discard "depth 10"
-git reset --hard HEAD~1
-```
-
-Then immediately start the next experiment.
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 2: DEPTH = 6
 
 ```bash
 ./edit_param.sh DEPTH 6
-git add train.py && git commit -m "try: depth 6"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic: CRASH → log crash + reset. IMPROVED → log keep. WORSE → log discard + reset.
+```bash
+git add train.py && git commit -m "try: depth 6"
+```
+
+```bash
+./run_experiment.sh "depth 6"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 3: MATRIX_LR = 0.06
 
 ```bash
 ./edit_param.sh MATRIX_LR 0.06
-git add train.py && git commit -m "try: matrix_lr 0.06"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: matrix_lr 0.06"
+```
+
+```bash
+./run_experiment.sh "matrix_lr 0.06"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 4: MATRIX_LR = 0.02
 
 ```bash
 ./edit_param.sh MATRIX_LR 0.02
-git add train.py && git commit -m "try: matrix_lr 0.02"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: matrix_lr 0.02"
+```
+
+```bash
+./run_experiment.sh "matrix_lr 0.02"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 5: TOTAL_BATCH_SIZE = 2**18
 
 ```bash
 ./edit_param.sh TOTAL_BATCH_SIZE '2**18'
-git add train.py && git commit -m "try: batch size 2**18"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: batch size 2**18"
+```
+
+```bash
+./run_experiment.sh "batch size 2**18"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 6: ASPECT_RATIO = 48
 
 ```bash
 ./edit_param.sh ASPECT_RATIO 48
-git add train.py && git commit -m "try: aspect ratio 48"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: aspect ratio 48"
+```
+
+```bash
+./run_experiment.sh "aspect ratio 48"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 7: ASPECT_RATIO = 80
 
 ```bash
 ./edit_param.sh ASPECT_RATIO 80
-git add train.py && git commit -m "try: aspect ratio 80"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: aspect ratio 80"
+```
+
+```bash
+./run_experiment.sh "aspect ratio 80"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 8: WARMDOWN_RATIO = 0.3
 
 ```bash
 ./edit_param.sh WARMDOWN_RATIO 0.3
-git add train.py && git commit -m "try: warmdown 0.3"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: warmdown 0.3"
+```
+
+```bash
+./run_experiment.sh "warmdown 0.3"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 9: WARMDOWN_RATIO = 0.7
 
 ```bash
 ./edit_param.sh WARMDOWN_RATIO 0.7
-git add train.py && git commit -m "try: warmdown 0.7"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: warmdown 0.7"
+```
+
+```bash
+./run_experiment.sh "warmdown 0.7"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 10: WEIGHT_DECAY = 0.1
 
 ```bash
 ./edit_param.sh WEIGHT_DECAY 0.1
-git add train.py && git commit -m "try: weight decay 0.1"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: weight decay 0.1"
+```
+
+```bash
+./run_experiment.sh "weight decay 0.1"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 11: EMBEDDING_LR = 0.8
 
 ```bash
 ./edit_param.sh EMBEDDING_LR 0.8
-git add train.py && git commit -m "try: embedding lr 0.8"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: embedding lr 0.8"
+```
+
+```bash
+./run_experiment.sh "embedding lr 0.8"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 12: WINDOW_PATTERN = "SSLL"
 
 ```bash
 ./edit_param.sh WINDOW_PATTERN '"SSLL"'
-git add train.py && git commit -m "try: window SSLL"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: window SSLL"
+```
+
+```bash
+./run_experiment.sh "window SSLL"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 13: WINDOW_PATTERN = "L"
 
 ```bash
 ./edit_param.sh WINDOW_PATTERN '"L"'
-git add train.py && git commit -m "try: window L"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: window L"
+```
+
+```bash
+./run_experiment.sh "window L"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 14: SCALAR_LR = 0.3
 
 ```bash
 ./edit_param.sh SCALAR_LR 0.3
-git add train.py && git commit -m "try: scalar lr 0.3"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: scalar lr 0.3"
+```
+
+```bash
+./run_experiment.sh "scalar lr 0.3"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert. Move to the next experiment.
 
 ### Experiment 15: HEAD_DIM = 64
 
 ```bash
 ./edit_param.sh HEAD_DIM 64
-git add train.py && git commit -m "try: head dim 64"
-uv run train.py > run.log 2>&1
-grep "^val_bpb:\|^peak_vram_mb:" run.log
 ```
 
-Same logic.
+```bash
+git add train.py && git commit -m "try: head dim 64"
+```
 
-### After all 15: Combine winning changes and try new values. Keep looping forever.
+```bash
+./run_experiment.sh "head dim 64"
+```
+
+If the output says CRASH or WORSE, run this:
+
+```bash
+./revert_experiment.sh
+```
+
+If the output says IMPROVED, do NOT revert.
+
+### After all 15: Go back to Experiment 1 and repeat with different values. Keep looping forever.
 
 ## REMEMBER
 
-- Lower val_bpb = better
-- memory_gb = peak_vram_mb / 1024
-- CRASH = grep returned nothing → log crash, git reset
-- IMPROVED = val_bpb < best → log keep, update best
-- WORSE = val_bpb >= best → log discard, git reset
+- CRASH or WORSE = run ./revert_experiment.sh
+- IMPROVED = do NOT revert
+- Do NOT stop. Start the next experiment immediately.
+- EVERY Bash tool call MUST include a "description" parameter or it will fail.

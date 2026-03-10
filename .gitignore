@@ -19,5 +19,8 @@ AGENTS.md
 # Experimental code/artifacts
 dev/
 
-# Results file
+# Results and experiment temp files
 results.tsv
+run.log
+best_val_bpb.txt
+train.py.tmp

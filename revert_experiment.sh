@@ -1,5 +1,5 @@
 #!/bin/bash
-# Revert the last commit (used when an experiment didn't improve val_bpb).
+# Revert the last commit (used when an experiment crashed or didn't improve).
 # Usage: ./revert_experiment.sh
 
 echo "Reverting last commit..."
