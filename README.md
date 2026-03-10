@@ -18,13 +18,19 @@ The upstream idea: give an AI agent a small but real LLM training setup and let 
 
 ## Quick start
 
-**Requirements:** NVIDIA GPU (for training), Python 3.10+, [uv](https://docs.astral.sh/uv/), [Ollama](https://ollama.com), [OpenCode](https://github.com/opencode-ai/opencode).
+**Requirements:**
+- **NVIDIA GPU** — training uses CUDA and Flash Attention 3 (tested on RTX/H100)
+- **Python 3.10+**
+- **[uv](https://docs.astral.sh/uv/)** — Python project manager
+- **[Ollama](https://ollama.com)** — runs the agent model locally
+- **[OpenCode](https://github.com/opencode-ai/opencode)** — coding agent that connects to Ollama
 
 ### 1. Set up training
 
 ```bash
-# Install uv (if needed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# Install uv (see https://docs.astral.sh/uv/getting-started/installation/)
+# Windows: powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+# Linux/Mac: curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install dependencies
 uv sync
@@ -65,7 +71,8 @@ prepare.py          — constants, data prep, tokenizer, evaluation (do not modi
 train.py            — model, optimizer, training loop (agent modifies this)
 program.md          — agent instructions for Claude/Codex (upstream)
 program-ollama.md   — agent instructions for local Ollama models (this fork)
-log_result.sh       — helper script to append experiment results
+edit_param.sh       — helper script to change one hyperparameter in train.py via sed
+log_result.sh       — helper script to append experiment results to results.tsv
 pyproject.toml      — dependencies
 ```
 
@@ -73,13 +80,14 @@ pyproject.toml      — dependencies
 
 Small local models (8B params) can't reliably follow abstract research instructions the way Claude Opus can. They get stuck in analysis loops, reformat entire files instead of making surgical edits, and chase linting warnings.
 
-`program-ollama.md` solves this by being extremely prescriptive:
+`program-ollama.md` and `edit_param.sh` solve this together:
 
-- Every experiment is its own numbered section with exact find/replace edits
+- **`edit_param.sh`** — the agent never touches the Edit tool (which small models can't use without reformatting the entire file). Instead it runs `./edit_param.sh DEPTH 10` to make surgical `sed` replacements
+- Every experiment is its own numbered section with exact bash commands to copy-paste
 - Commit messages are pre-written
 - Decision logic (keep/discard/crash) is repeated inline, not referenced abstractly
 - Explicit "ignore all warnings" rules prevent the model from getting distracted
-- The tone is "execute commands" not "reason about what to do"
+- The tone is "just run bash commands" not "reason about what to do"
 
 This is essentially treating the local model as a script executor rather than a researcher. The "research" is front-loaded into the prompt design.
 
