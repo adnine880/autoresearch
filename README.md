@@ -32,27 +32,111 @@ uv run prepare.py
 uv run train.py
 ```
 
-### 2. Set up the local agent
+### 2. Install Ollama
+
+1. Go to [ollama.com](https://ollama.com) and download the installer for your OS
+2. Run the installer — Ollama runs as a background service automatically
+3. Verify it's working:
 
 ```bash
-# Install Ollama and pull a model
-ollama pull qwen3:8b
-
-# Install OpenCode
-# See https://github.com/opencode-ai/opencode for instructions
+ollama --version
 ```
 
-Configure OpenCode to use Ollama as its backend (see OpenCode docs for provider setup).
+### 3. Download a model
 
-### 3. Run the agent
+For agentic use with OpenCode, you need a model that supports **tool calling** — this is what lets the AI actually read/write files and take actions. The best balance of capability and size is Qwen3 8B:
 
-Launch OpenCode in this repo and prompt:
+```bash
+ollama pull qwen3:8b
+```
+
+**Recommended models by machine spec:**
+
+| RAM available | Recommended model |
+|---------------|-------------------|
+| 8 GB | `qwen3:8b` |
+| 16 GB | `qwen3:14b` or `qwen2.5-coder:14b` |
+| 32 GB+ | `qwen3:30b` or `qwen2.5-coder:32b` |
+
+The `qwen2.5-coder` series is particularly strong at writing code and data transformation if that's your primary use case.
+
+### 4. Increase the context window (critical)
+
+Ollama defaults to a 4096-token context window even when models support much larger contexts — this **must** be increased for agentic actions and tool use to work in OpenCode.
+
+Run the model, set the context, then save it as a new variant:
+
+```bash
+ollama run qwen3:8b
+>>> /set parameter num_ctx 32768
+>>> /save qwen3:8b-32k
+>>> /bye
+```
+
+You now have a model called `qwen3:8b-32k` with a proper context window.
+
+### 5. Install Node.js
+
+OpenCode requires Node.js 20 or higher. Download from [nodejs.org](https://nodejs.org) (choose the LTS version). Verify after installing:
+
+```bash
+node --version
+```
+
+### 6. Install OpenCode
+
+```bash
+npm install -g opencode-ai
+```
+
+Verify it installed:
+
+```bash
+opencode --version
+```
+
+### 7. Configure OpenCode to use your local Ollama model
+
+Create or edit the config file at `~/.config/opencode/opencode.json` (on Windows: `C:\Users\YourName\.config\opencode\opencode.json`):
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      },
+      "models": {
+        "qwen3:8b-32k": {
+          "name": "Qwen3 8B (local)",
+          "tools": true
+        }
+      }
+    }
+  }
+}
+```
+
+### 8. Run the agent
+
+Navigate to this repo folder and launch OpenCode:
+
+```bash
+opencode
+```
+
+Inside OpenCode, use `/models` to select your Ollama model. Then prompt:
 
 ```
 Look at program-ollama.md and kick off a new experiment.
 ```
 
 The agent will create a branch, run a baseline, then loop through hyperparameter experiments autonomously. Each run takes ~5 minutes, so expect ~12 experiments/hour.
+
+Everything stays on your machine — no API keys required, no cloud costs, complete privacy, and offline capability.
 
 ## Tuning for your laptop
 
